@@ -113,3 +113,17 @@ Adicionalmente, `/dev` contiene **pseudodispositivos**, que son drivers purament
 * `/dev/null`: Descarta toda la información que se le envía.
 * `/dev/zero`: Produce un flujo infinito de ceros (caracteres nulos).
 * `/dev/urandom`: Generador de números pseudoaleatorios del kernel.
+
+### 1) ¿Qué diferencias se pueden observar entre los dos modinfo?
+
+La diferencia principal entre las dos ejecuciones del comando `modinfo` radica en la cantidad de metadatos (información descriptiva) que el kernel puede leer del archivo compilado (`.ko`).
+
+* **Primer `modinfo`(modinfo mimodulo.ko):** Corresponde a la compilación del módulo en su versión más básica. Al ejecutar el comando, la salida solo muestra la información técnica mínima generada automáticamente por el compilador y el entorno de construcción (*Kbuild*). Esto incluye campos obligatorios como el nombre del archivo (`filename`), la versión del kernel compatible (`vermagic`), la versión del código fuente (`srcversion`), dependencias (`depends`) y el nombre del módulo (`name`).
+
+* **Segundo `modinfo` (modinfo /lib/modules/$(uname -r)/kernel/crypto/des_generic.ko):** Corresponde a la versión del módulo tras haberle agregado las macros de información en el código fuente en C. La gran diferencia es que la salida ahora incluye campos descriptivos legibles por humanos, los cuales son fundamentales para documentar el módulo. Se añaden explícitamente detalles como:
+    * **`author`**: El nombre y/o correo del creador del módulo (generado por `MODULE_AUTHOR`).
+    * **`description`**: Una breve explicación de lo que hace el módulo (generado por `MODULE_DESCRIPTION`).
+    * **`license`**: El tipo de licencia del código, crucial para que el kernel sepa si el módulo es de código abierto o propietario (generado por `MODULE_LICENSE`).
+    * **`version`**: La versión actual del software (generado por `MODULE_VERSION`).
+
+En conclusión, el segundo `modinfo` refleja un módulo correctamente documentado e integrado con los estándares del kernel de Linux, mientras que el primero es solo un binario funcional pero anónimo.
