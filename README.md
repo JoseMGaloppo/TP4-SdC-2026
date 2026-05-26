@@ -202,3 +202,17 @@ Cuando un proceso realiza un acceso indebido, la Unidad de Gestión de Memoria d
 **Manejo por parte del Programa:**
 * **Comportamiento por defecto:** Cuando un programa que se ejecuta en el espacio de usuario recibe la señal `SIGSEGV` proveniente del kernel, su comportamiento predeterminado es abortar su ejecución de manera inmediata y anormal.
 * **Comportamiento modificado:** El programador tiene la capacidad técnica de interceptar esta señal desde el código fuente utilizando llamadas al sistema para el manejo de señales (como `sigaction()`). Si el programa captura la señal, puede ejecutar un bloque de código de emergencia (manejador) antes de cerrarse, lo cual se suele utilizar para escribir un registro en un archivo log o liberar recursos de red de forma prolija. Sin embargo, no se considera seguro ni viable intentar reanudar la ejecución normal del programa tras interceptar un Segmentation Fault, dado que el estado interno de la memoria del programa ya se considera corrupto.
+
+### 11) Análisis de caso: Incidente de Secure Boot y GRUB 
+
+**¿Cuál fue la consecuencia principal del parche de Microsoft sobre GRUB en sistemas con arranque dual (Linux y Windows)?**
+
+La consecuencia principal fue la inoperatividad del sistema operativo Linux en configuraciones de arranque dual (dual-boot). El parche de Windows Update introdujo una actualización en la política SBAT (Secure Boot Advanced Targeting) cuyo objetivo era revocar certificados de gestores de arranque Linux antiguos y vulnerables. Sin embargo, la implementación fue defectuosa y terminó bloqueando versiones modernas, legítimas y seguras de GRUB. Como resultado, al intentar iniciar la partición de Linux, los sistemas afectados rechazaban el arranque arrojando un mensaje de error de "Violación de la Política de Seguridad" (Security Policy Violation) o "Algo salió mal", impidiendo la carga del kernel de Linux.
+
+**¿Qué implicancia tiene desactivar Secure Boot como solución al problema descrito en el artículo?**
+
+Deshabilitar Secure Boot desde la configuración UEFI/BIOS permite evadir el bloqueo y lograr que Linux vuelva a arrancar (sirviendo como una solución temporal o *workaround*). No obstante, la implicancia es una degradación crítica en la postura de seguridad del equipo. Al apagar esta función, se elimina la validación de firmas criptográficas durante el inicio, dejando al sistema entero (incluyendo la instalación de Windows que comparte la máquina) vulnerable a ataques de nivel de firmware, tales como *bootkits* y *rootkits*. Estos tipos de malware se inicializan antes que el sistema operativo y el software antivirus, logrando persistencia total y control absoluto sobre el hardware.
+
+**¿Cuál es el propósito principal del Secure Boot en el proceso de arranque de un sistema?**
+
+El propósito fundamental de Secure Boot (Arranque Seguro), una característica del estándar UEFI, es establecer y mantener una "cadena de confianza" (Chain of Trust) desde el instante en que se enciende el hardware. Su función es garantizar que cada pieza de software que participa en la secuencia de arranque (el firmware, el gestor de arranque, los módulos y el propio kernel del sistema operativo) posea una firma digital válida emitida por una autoridad reconocida (OEM, Microsoft, etc.). Si algún componente carece de firma, o si su firma está revocada o alterada (indicando una posible inyección de código malicioso), el sistema detiene el proceso de arranque para proteger la integridad del equipo.
