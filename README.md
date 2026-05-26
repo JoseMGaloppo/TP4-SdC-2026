@@ -148,3 +148,19 @@ Dado que la lista exacta varía dependiendo del hardware físico o de la configu
 * **Sistemas de archivos y almacenamiento:** `ext4`, `ahci` (controladores SATA).
 
 *Nota: Para completar esta respuesta de forma empírica en el entorno de trabajo, se ejecutó el comando `lsmod` en la terminal de la máquina virtual, comprobando la presencia de módulos específicos de virtualización y periféricos básicos asignados por el hipervisor.*
+
+### 3) ¿Cuáles módulos no están cargados pero están disponibles? ¿Qué pasa cuando el driver de un dispositivo no está disponible?
+
+**Módulos disponibles pero no cargados en memoria:**
+El kernel de Linux está diseñado para ser modular y eficiente. No carga todos los controladores existentes en la memoria RAM al arrancar, ya que esto consumiría recursos de forma excesiva. En su lugar, solo carga dinámicamente los módulos que el hardware actual requiere. 
+
+Los módulos que están "disponibles" (compilados y listos para usarse) pero que no están cargados actualmente, se encuentran almacenados físicamente en el disco duro, dentro del árbol de directorios: `/lib/modules/$(uname -r)/kernel/` (donde `$(uname -r)` corresponde a la versión del kernel en ejecución). Estos archivos poseen la extensión `.ko` (Kernel Object). Para ver todos los módulos disponibles en el sistema, se puede explorar dicho directorio mediante el comando:
+`find /lib/modules/$(uname -r)/ -type f -name "*.ko"`
+
+**Consecuencias de la indisponibilidad de un driver:**
+Cuando se conecta un dispositivo físico (o se intenta cargar un dispositivo virtual/lógico) y su controlador no está disponible (es decir, no está en el directorio de módulos y no fue compilado estáticamente dentro del kernel), suceden las siguientes acciones a nivel de sistema:
+
+1. **Detección eléctrica sin inicialización lógica:** El sistema operativo es capaz de detectar que un componente fue conectado a un bus (como PCI, USB, etc.) leyendo sus identificadores básicos (Vendor ID y Product ID). Sin embargo, al no tener el driver, el kernel no sabe qué instrucciones enviarle para inicializarlo o controlarlo.
+2. **Ausencia de archivo de dispositivo:** El kernel no crea el nodo de abstracción correspondiente en el directorio `/dev/` (por ejemplo, no aparecerá `/dev/video0` al conectar una cámara web). En consecuencia, los programas que operan en el espacio de usuario no tienen ninguna interfaz para interactuar con el hardware.
+3. **Inoperatividad total:** El dispositivo queda inutilizable. Si se consultan los registros del sistema mediante el comando `dmesg`, se podrán observar mensajes del kernel indicando que se encontró un nuevo hardware, pero que no pudo ser "reclamado" (claimed) por ningún controlador asociado.
+4. **Fallo en la carga manual:** Si el archivo `.ko` no fue compilado correctamente para la arquitectura y versión exacta de las cabeceras del kernel en uso (como ocurrió durante los errores de compilación previos en el desarrollo del módulo propio), herramientas como `insmod` o `modprobe` fallarán al intentar inyectarlo en el sistema, arrojando errores de formato inválido o símbolos no encontrados.
