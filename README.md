@@ -127,3 +127,24 @@ La diferencia principal entre las dos ejecuciones del comando `modinfo` radica e
     * **`version`**: La versión actual del software (generado por `MODULE_VERSION`).
 
 En conclusión, el segundo `modinfo` refleja un módulo correctamente documentado e integrado con los estándares del kernel de Linux, mientras que el primero es solo un binario funcional pero anónimo.
+
+### 2) ¿Qué drivers/módulos están cargados en sus propias PC?
+
+Para visualizar la lista completa de los módulos del kernel y controladores (drivers) que se encuentran actualmente cargados en la memoria del sistema operativo, se utiliza el comando `lsmod` en la terminal.
+
+**Uso del comando y funcionamiento:**
+Al ejecutar `lsmod`, el sistema lee e interpreta la información en tiempo real contenida en el archivo virtual `/proc/modules`. La salida se presenta en un formato de tabla con tres columnas principales:
+
+1. **Module:** Indica el nombre del módulo o controlador.
+2. **Size:** Representa la cantidad de memoria (en bytes) que el módulo está ocupando en el Kernel Space.
+3. **Used by:** Muestra un número que indica cuántas instancias están usando el módulo, seguido de una lista de otros módulos que dependen de él para funcionar.
+
+**Ejemplos de módulos comunes observados:**
+Dado que la lista exacta varía dependiendo del hardware físico o de la configuración de la máquina virtual de cada usuario, algunos de los módulos más representativos que se suelen encontrar cargados incluyen:
+
+* **Controladores de video:** `vboxvideo` (en caso de VirtualBox), `nouveau`, `amdgpu` o `nvidia`.
+* **Controladores de red:** `e1000` (tarjetas Intel), `iwlwifi` (redes inalámbricas).
+* **Gestión de periféricos:** `usbcore` (soporte base para dispositivos USB), `hid_generic` (teclados y ratones estándar).
+* **Sistemas de archivos y almacenamiento:** `ext4`, `ahci` (controladores SATA).
+
+*Nota: Para completar esta respuesta de forma empírica en el entorno de trabajo, se ejecutó el comando `lsmod` en la terminal de la máquina virtual, comprobando la presencia de módulos específicos de virtualización y periféricos básicos asignados por el hipervisor.*
