@@ -164,3 +164,41 @@ Cuando se conecta un dispositivo físico (o se intenta cargar un dispositivo vir
 2. **Ausencia de archivo de dispositivo:** El kernel no crea el nodo de abstracción correspondiente en el directorio `/dev/` (por ejemplo, no aparecerá `/dev/video0` al conectar una cámara web). En consecuencia, los programas que operan en el espacio de usuario no tienen ninguna interfaz para interactuar con el hardware.
 3. **Inoperatividad total:** El dispositivo queda inutilizable. Si se consultan los registros del sistema mediante el comando `dmesg`, se podrán observar mensajes del kernel indicando que se encontró un nuevo hardware, pero que no pudo ser "reclamado" (claimed) por ningún controlador asociado.
 4. **Fallo en la carga manual:** Si el archivo `.ko` no fue compilado correctamente para la arquitectura y versión exacta de las cabeceras del kernel en uso (como ocurrió durante los errores de compilación previos en el desarrollo del módulo propio), herramientas como `insmod` o `modprobe` fallarán al intentar inyectarlo en el sistema, arrojando errores de formato inválido o símbolos no encontrados.
+
+### 5) ¿Qué diferencia existe entre un módulo y un programa?
+
+Existen diferencias arquitectónicas fundamentales entre un programa convencional y un módulo del kernel:
+
+* **Espacio de Ejecución:** Un programa se ejecuta en el **Espacio de Usuario (User Space)**, lo que significa que opera con privilegios restringidos (Anillo 3). Un módulo se ejecuta en el **Espacio del Kernel (Kernel Space)**, operando con los máximos privilegios del procesador (Anillo 0) y acceso directo al hardware.
+* **Punto de Entrada y Flujo:** Un programa clásico en C inicia su ejecución secuencial desde una única función principal (`main()`). En contraste, un módulo no tiene una función `main()`; está diseñado bajo un paradigma orientado a eventos. Se carga mediante una función de inicialización (`module_init`) y a partir de allí queda residente en memoria reaccionando a las llamadas que el kernel le delegue, hasta que es removido (vía `module_exit`).
+* **Bibliotecas:** Los programas dependen fuertemente de las bibliotecas del espacio de usuario (como `glibc` para usar `printf` o `malloc`). Los módulos carecen de acceso a estas bibliotecas estandarizadas; deben usar exclusivamente las funciones provistas y exportadas por el propio kernel (como `printk` o `kmalloc`).
+* **Tolerancia a Fallos:** Si un programa intenta realizar una operación ilegal (como acceder a memoria prohibida), el sistema operativo lo intercepta y lo cierra aisladamente sin afectar al resto del equipo. Si un módulo realiza una operación ilegal, la falta de aislamiento en el espacio del kernel genera un fallo sistémico crítico, usualmente culminando en un *Kernel Panic* que detiene por completo el sistema operativo.
+
+### 6) ¿Cómo puede ver una lista de las llamadas al sistema que realiza un simple "Hello World" en C?
+
+Para rastrear e inspeccionar las llamadas al sistema (system calls) que realiza un programa durante su ejecución en entornos Linux, se utiliza la herramienta de diagnóstico **`strace`**.
+
+Una vez compilado el programa "Hello World" (por ejemplo, generando el binario ejecutable `hello`), el comando a utilizar en la terminal es:
+
+```bash
+strace ./hello
+```
+
+**Salida y Análisis:**
+El comando `strace` interceptará y mostrará línea por línea cada interacción directa entre el proceso de usuario y el kernel. Aunque el código fuente original solo tenga una función `printf`, la salida de `strace` revelará múltiples llamadas al sistema subyacentes. Algunas de las más relevantes que se podrán observar incluyen:
+* `execve()`: Solicitada para iniciar el proceso y cargar la imagen del ejecutable.
+* `mmap()` y `mprotect()`: Utilizadas para mapear en memoria y asignar permisos a las bibliotecas compartidas necesarias dinámicamente (como `libc`).
+* `write()`: Es la llamada al sistema fundamental que el kernel utiliza para escribir la cadena de texto real ("Hello World") en el descriptor de archivo 1 (Standard Output).
+* `exit_group()`: Invocada al finalizar para que el kernel destruya el proceso y libere los recursos.
+
+### 7) ¿Qué es un Segmentation Fault? ¿Cómo lo maneja el kernel y cómo lo hace un programa?
+
+**Definición:**
+Un *Segmentation Fault* (Fallo de Segmentación) es un error crítico de violación de acceso a la memoria. Ocurre cuando un proceso intenta acceder a una dirección de memoria virtual que no le ha sido asignada legalmente por el sistema operativo, o cuando intenta realizar una operación no autorizada en un segmento de memoria válido (por ejemplo, intentar escribir datos en una región marcada exclusivamente como de solo lectura).
+
+**Manejo por parte del Kernel:**
+Cuando un proceso realiza un acceso indebido, la Unidad de Gestión de Memoria del procesador (MMU) lo detecta a nivel de hardware y lanza una excepción conocida como *Page Fault*. El kernel de Linux intercepta esta excepción inmediatamente. Al revisar las tablas de páginas del proceso y confirmar que la acción es ilegítima, el kernel interviene enviando una señal específica denominada **`SIGSEGV`** (Signal 11 - Segmentation Violation) al proceso infractor. Adicionalmente, el kernel puede generar un volcado de memoria (*core dump*) que guarda el estado exacto del programa en el momento del fallo para facilitar su depuración posterior.
+
+**Manejo por parte del Programa:**
+* **Comportamiento por defecto:** Cuando un programa que se ejecuta en el espacio de usuario recibe la señal `SIGSEGV` proveniente del kernel, su comportamiento predeterminado es abortar su ejecución de manera inmediata y anormal.
+* **Comportamiento modificado:** El programador tiene la capacidad técnica de interceptar esta señal desde el código fuente utilizando llamadas al sistema para el manejo de señales (como `sigaction()`). Si el programa captura la señal, puede ejecutar un bloque de código de emergencia (manejador) antes de cerrarse, lo cual se suele utilizar para escribir un registro en un archivo log o liberar recursos de red de forma prolija. Sin embargo, no se considera seguro ni viable intentar reanudar la ejecución normal del programa tras interceptar un Segmentation Fault, dado que el estado interno de la memoria del programa ya se considera corrupto.
