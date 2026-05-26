@@ -1,6 +1,6 @@
 # TP4-SdC-2026
 
-## 🛡️ Desafío #1: Empaquetado y Seguridad del Kernel
+##  Desafío #1: Empaquetado y Seguridad del Kernel
 
 ### 1. ¿Qué es `checkinstall` y para qué sirve?
 
