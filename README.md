@@ -4,19 +4,19 @@
 
 ### 1. ¿Qué es `checkinstall` y para qué sirve?
 
-`checkinstall` es una herramienta de línea de comandos en Linux diseñada para facilitar la gestión de programas que se compilan a partir de su código fuente. 
+`checkinstall` es una herramienta de línea de comandos para sistemas operativos tipo Unix diseñada para facilitar la gestión de programas que se compilan a partir de su código fuente. Esta herramienta genera un paquete instalable como `.deb` o `.tgz`.
 
-Normalmente, al compilar software manualmente, el último paso es ejecutar `make install`. Este comando copia los binarios y archivos directamente a los directorios del sistema operativo (`/usr/local/bin`, etc.). El gran problema de esto es que el gestor de paquetes del sistema (como APT en Ubuntu) no se entera de esta instalación, lo que hace que rastrear y desinstalar estos archivos en el futuro sea muy difícil y propenso a ensuciar el sistema.
+Normalmente, al compilar software manualmente, el último paso es ejecutar `make install`. Este comando copia los binarios y archivos directamente a los directorios del sistema operativo (`/usr/local/bin`, etc.). El gran problema de esto es que el gestor de paquetes del sistema, como APT, no se entera de esta instalación, lo que hace que rastrear y desinstalar estos archivos en el futuro sea más difícil y propenso a ensuciar el sistema.
 
-**¿Para qué sirve?** `checkinstall` reemplaza al comando `make install`. Su función es monitorear la instalación y, en lugar de copiar los archivos directamente, crea un paquete de instalación estándar (`.deb` en sistemas basados en Debian/Ubuntu, o `.rpm` en RedHat) y lo instala a través del gestor de paquetes nativo. Esto permite que el software compilado manualmente quede registrado en el sistema y se pueda desinstalar limpiamente usando comandos convencionales (como `apt-get remove` o `dpkg -r`).
+Posteriomente los programas instalados con checkinstall se pueda desinstalar limpiamente usando comandos convencionales como `apt-get remove` o `dpkg -r`.
 
 ---
 
 ### 2. Empaquetando un "Hello World" con `checkinstall`
 
-Para demostrar su uso con un programa clásico de "Hola Mundo" en C, es requisito que el proyecto cuente con un archivo `Makefile` que incluya una regla de instalación (`install`). A continuación se detalla el procedimiento:
+Para demostrar su uso con un programa clásico de "Hola Mundo" en C, es requisito que el proyecto cuente con un archivo `Makefile` que incluya una regla de instalación (`install`).
 
-**Paso A: Crear el código fuente (`hello.c`)**
+**`hello.c`**
 ```c
 #include <stdio.h>
 
@@ -26,7 +26,7 @@ int main() {
 }
 ```
 
-**Paso B: Crear el `Makefile`**
+**`Makefile`**
 Debe contener las instrucciones para compilar y para instalar el binario.
 ```makefile
 all: hello
@@ -41,7 +41,7 @@ clean:
 	rm -f hello
 ```
 
-**Paso C: Compilar y Empaquetar**
+**Compilar y Empaquetar**
 En la terminal, dentro de la carpeta donde están ambos archivos, se ejecuta:
 ```bash
 make
@@ -49,11 +49,20 @@ sudo checkinstall
 ```
 *Nota: Durante la ejecución, `checkinstall` abrirá un asistente interactivo pidiendo confirmar los metadatos del paquete (nombre, versión, descripción, etc.). Se pueden aceptar los valores por defecto presionando `Enter`.*
 
-**Paso D: Verificación y Desinstalación**
+![check1](Imagenes/check1.png)
+
+**Verificación y Desinstalación**
 El programa ahora es un paquete oficial en el sistema.
 * **Para ejecutarlo en cualquier parte:** `hello`
+![check2](Imagenes/check2.png)
 * **Para ver información del paquete:** `dpkg -l | grep hello`
+![check2](Imagenes/check3.png)
 * **Para desinstalarlo de forma limpia:** `sudo dpkg -r hello`
+![check2](Imagenes/check4.png)
+
+
+>[!NOTE]
+>El programa utiliza el nombre de la carpeta para darle nombre al paquete. Dado que el primer nombre que se usó fue "Code" el paquete sobreescribió el paquete de VS Code borrandolo. Tener más cuidado para la próxima.
 
 ---
 
@@ -105,20 +114,32 @@ En sistemas basados en UNIX, la filosofía subyacente es que "todo es un archivo
 **El directorio `/dev`:**
 Contiene archivos especiales de dispositivos (nodos de dispositivo). Estos archivos no almacenan datos en un disco de la manera tradicional; en su lugar, actúan como un canal de comunicación directo hacia el driver en el kernel. Cuando un programa de usuario lee o escribe en un archivo dentro de `/dev`, el kernel intercepta esa operación y transfiere los datos a la función correspondiente del driver.
 
+![dev1](Imagenes/dev1.png)
+
 Al investigar el contenido de `/dev`, se pueden clasificar los dispositivos principalmente en dos tipos:
 1.  **Dispositivos de caracteres (Character devices):** Identificados con la letra 'c' en sus permisos (ej. `ls -l /dev/tty`). Transmiten datos de forma secuencial, un byte (carácter) a la vez. Ejemplos: teclados, ratones, puertos serie (`/dev/ttyS0`), y terminales virtuales.
 2.  **Dispositivos de bloques (Block devices):** Identificados con la letra 'b'. Permiten leer o escribir datos en bloques de tamaño fijo a la vez (por ejemplo, 512 bytes o 4KB) y suelen admitir acceso aleatorio. Ejemplos: discos duros y particiones (`/dev/sda`, `/dev/nvme0n1`), unidades USB, etc.
+
+![dev1](Imagenes/dev2.png)
 
 Adicionalmente, `/dev` contiene **pseudodispositivos**, que son drivers puramente virtuales gestionados por el kernel, tales como:
 * `/dev/null`: Descarta toda la información que se le envía.
 * `/dev/zero`: Produce un flujo infinito de ceros (caracteres nulos).
 * `/dev/urandom`: Generador de números pseudoaleatorios del kernel.
+--- 
+## Preguntas extras
 
 ### 1) ¿Qué diferencias se pueden observar entre los dos modinfo?
 
 La diferencia principal entre las dos ejecuciones del comando `modinfo` radica en la cantidad de metadatos (información descriptiva) que el kernel puede leer del archivo compilado (`.ko`).
 
+![modinfo1](Imagenes/modinfo1.jpeg)
+
 * **Primer `modinfo`(modinfo mimodulo.ko):** Corresponde a la compilación del módulo en su versión más básica. Al ejecutar el comando, la salida solo muestra la información técnica mínima generada automáticamente por el compilador y el entorno de construcción (*Kbuild*). Esto incluye campos obligatorios como el nombre del archivo (`filename`), la versión del kernel compatible (`vermagic`), la versión del código fuente (`srcversion`), dependencias (`depends`) y el nombre del módulo (`name`).
+
+<br>
+
+![modinfo1](Imagenes/modinfo2.jpeg)
 
 * **Segundo `modinfo` (modinfo /lib/modules/$(uname -r)/kernel/crypto/des_generic.ko):** Corresponde a la versión del módulo tras haberle agregado las macros de información en el código fuente en C. La gran diferencia es que la salida ahora incluye campos descriptivos legibles por humanos, los cuales son fundamentales para documentar el módulo. Se añaden explícitamente detalles como:
     * **`author`**: El nombre y/o correo del creador del módulo (generado por `MODULE_AUTHOR`).
@@ -126,7 +147,6 @@ La diferencia principal entre las dos ejecuciones del comando `modinfo` radica e
     * **`license`**: El tipo de licencia del código, crucial para que el kernel sepa si el módulo es de código abierto o propietario (generado por `MODULE_LICENSE`).
     * **`version`**: La versión actual del software (generado por `MODULE_VERSION`).
 
-En conclusión, el segundo `modinfo` refleja un módulo correctamente documentado e integrado con los estándares del kernel de Linux, mientras que el primero es solo un binario funcional pero anónimo.
 
 ### 2) ¿Qué drivers/módulos están cargados en sus propias PC?
 
@@ -147,7 +167,40 @@ Dado que la lista exacta varía dependiendo del hardware físico o de la configu
 * **Gestión de periféricos:** `usbcore` (soporte base para dispositivos USB), `hid_generic` (teclados y ratones estándar).
 * **Sistemas de archivos y almacenamiento:** `ext4`, `ahci` (controladores SATA).
 
-*Nota: Para completar esta respuesta de forma empírica en el entorno de trabajo, se ejecutó el comando `lsmod` en la terminal de la máquina virtual, comprobando la presencia de módulos específicos de virtualización y periféricos básicos asignados por el hipervisor.*
+```txt
+1a2,5
+> vxlan                 155648  0
+> ip6_udp_tunnel         16384  1 vxlan
+> udp_tunnel             32768  1 vxlan
+> ccm                    20480  6
+2a7,11
+> snd_seq_dummy          12288  0
+> snd_hrtimer            12288  1
+> vboxnetadp             28672  0
+> vboxnetflt             32768  0
+> vboxdrv               696320  2 vboxnetadp,vboxnetflt
+7,20c16,20
+< bnep                   32768  2
+< ath3k                  20480  0
+< btusb                  81920  0
+< btrtl                  32768  1 btusb
+< btintel                57344  1 btusb
+< btbcm                  24576  1 btusb
+< btmtk                  12288  1 btusb
+< bluetooth            1036288  45 btrtl,btmtk,btintel,btbcm,bnep,ath3k,btusb,rfcomm
+< ecdh_generic           16384  2 bluetooth
+< ecc                    45056  1 ecdh_generic
+< xt_conntrack           12288  3
+< xt_MASQUERADE          16384  3
+< bridge                425984  0
+< stp                    12288  1 bridge
+---
+> snd_ctl_led            24576  0
+> ledtrig_audio          12288  1 snd_ctl_led
+> snd_hda_codec_realtek   208896  1
+> snd_hda_codec_generic   122880  1 snd_hda_codec_realtek
+> qrtr                   53248  2
+```
 
 ### 3) ¿Cuáles módulos no están cargados pero están disponibles? ¿Qué pasa cuando el driver de un dispositivo no está disponible?
 
@@ -164,6 +217,8 @@ Cuando se conecta un dispositivo físico (o se intenta cargar un dispositivo vir
 2. **Ausencia de archivo de dispositivo:** El kernel no crea el nodo de abstracción correspondiente en el directorio `/dev/` (por ejemplo, no aparecerá `/dev/video0` al conectar una cámara web). En consecuencia, los programas que operan en el espacio de usuario no tienen ninguna interfaz para interactuar con el hardware.
 3. **Inoperatividad total:** El dispositivo queda inutilizable. Si se consultan los registros del sistema mediante el comando `dmesg`, se podrán observar mensajes del kernel indicando que se encontró un nuevo hardware, pero que no pudo ser "reclamado" (claimed) por ningún controlador asociado.
 4. **Fallo en la carga manual:** Si el archivo `.ko` no fue compilado correctamente para la arquitectura y versión exacta de las cabeceras del kernel en uso (como ocurrió durante los errores de compilación previos en el desarrollo del módulo propio), herramientas como `insmod` o `modprobe` fallarán al intentar inyectarlo en el sistema, arrojando errores de formato inválido o símbolos no encontrados.
+
+### 4) hwjose.txt
 
 ### 5) ¿Qué diferencia existe entre un módulo y un programa?
 
